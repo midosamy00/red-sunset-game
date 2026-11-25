@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>الغروب الأحمر — Red Sunset</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='7' fill='%23ff7a1a'/></svg>">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#1a0f08;font-family:"Segoe UI",Tahoma,Arial,"Noto Naskh Arabic","Traditional Arabic",sans-serif;color:#f5e6c8}
+#gameCanvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hidden{display:none!important}
+/* ---------- overlays ---------- */
+.overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 30%,rgba(120,40,10,.85),rgba(20,8,4,.96) 70%);z-index:20;text-align:center;padding:20px;overflow-y:auto}
+.title-main{font-size:min(64px,11vw);font-weight:900;color:#ffb347;text-shadow:0 0 30px rgba(255,90,0,.7),0 4px 0 #7a2d00;letter-spacing:2px;line-height:1.1}
+.title-sub{font-size:min(20px,4.5vw);color:#e8c88a;margin:8px 0 4px}
+.title-tag{font-size:15px;color:#c9a06a;margin-bottom:18px}
+.sun{width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,#ffd27a 0%,#ff7a1a 55%,#c22e00 100%);box-shadow:0 0 60px 18px rgba(255,110,20,.55);margin-bottom:10px}
+.name-row{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin:10px 0 18px}
+.name-row label{font-size:16px;color:#e8c88a}
+#playerName{font-size:18px;padding:10px 14px;border-radius:10px;border:2px solid #b96a1e;background:#2a160a;color:#ffe9b0;text-align:center;min-width:240px;direction:rtl}
+.menu-btn{display:block;width:min(320px,86vw);margin:7px auto;padding:13px 20px;font-size:19px;font-weight:700;color:#2a1200;background:linear-gradient(180deg,#ffcf6e,#e8930c);border:2px solid #7a4a00;border-radius:12px;cursor:pointer;box-shadow:0 4px 0 #7a4a00}
+.menu-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #7a4a00}
+.menu-btn.secondary{background:linear-gradient(180deg,#5a3a22,#3a2412);color:#ffd9a0;border-color:#8a5a28;box-shadow:0 4px 0 #241505}
+.menu-btn:disabled{opacity:.45;cursor:not-allowed}
+.small-note{font-size:13px;color:#b08d5e;margin-top:14px;max-width:520px;line-height:1.7}
+.panel{background:rgba(30,16,6,.95);border:2px solid #8a5a28;border-radius:14px;padding:20px;max-width:640px;width:94vw;max-height:84vh;overflow-y:auto;text-align:right;line-height:1.9;font-size:16px}
+.panel h2{color:#ffb347;text-align:center;margin-bottom:12px}
+.panel h3{color:#ffcf6e;margin-top:14px}
+.panel .close-x{float:left}
+/* ---------- HUD ---------- */
+#hud{position:fixed;inset:0;pointer-events:none;z-index:10;direction:rtl}
+#objectiveBar{position:absolute;top:10px;right:50%;transform:translateX(50%);background:rgba(20,10,4,.78);border:1px solid #b96a1e;border-radius:10px;padding:7px 16px;font-size:16px;color:#ffe9b0;max-width:92vw;text-align:center}
+#objectiveBar .ch{color:#ffb347;font-weight:700}
+#statsBar{position:absolute;top:10px;right:10px;background:rgba(20,10,4,.78);border:1px solid #b96a1e;border-radius:10px;padding:8px 12px;font-size:14px;line-height:1.8;min-width:150px}
+.bar{height:10px;background:#3a2412;border-radius:5px;overflow:hidden;margin:2px 0}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,#ff5a1a,#ffb347)}
+.bar.health>i{background:linear-gradient(90deg,#c22,#f66)}
+#compass{position:absolute;top:64px;right:50%;transform:translateX(50%);width:44px;height:44px;border-radius:50%;background:rgba(20,10,4,.8);border:2px solid #b96a1e;display:flex;align-items:center;justify-content:center;font-size:24px;color:#ffb347}
+#fps{position:absolute;bottom:8px;left:8px;font-size:12px;color:#d8b078;background:rgba(0,0,0,.5);padding:3px 8px;border-radius:6px}
+#crosshair{position:absolute;top:50%;left:50%;width:26px;height:26px;transform:translate(-50%,-50%);display:none}
+#crosshair:before,#crosshair:after{content:"";position:absolute;background:#ffe9b0;box-shadow:0 0 4px #000}
+#crosshair:before{left:12px;top:0;width:2px;height:26px}
+#crosshair:after{top:12px;left:0;height:2px;width:26px}
+#eagleTint{position:fixed;inset:0;pointer-events:none;z-index:9;background:radial-gradient(ellipse at center,transparent 40%,rgba(180,0,0,.45) 100%);display:none}
+#spyglass{position:fixed;inset:0;pointer-events:none;z-index:9;display:none;background:radial-gradient(circle at center,transparent 22%,rgba(0,0,0,.97) 34%)}
+#stormFx{position:fixed;inset:0;pointer-events:none;z-index:8;background:rgba(210,160,60,.14);display:none}
+#toast{position:absolute;bottom:120px;right:50%;transform:translateX(50%);background:rgba(20,10,4,.88);border:1px solid #ffb347;color:#ffe9b0;padding:9px 18px;border-radius:10px;font-size:16px;max-width:90vw;text-align:center;display:none}
+#interactBtn{position:absolute;bottom:170px;right:50%;transform:translateX(50%);pointer-events:auto;background:#e8930c;color:#2a1200;border:2px solid #7a4a00;border-radius:12px;padding:12px 26px;font-size:18px;font-weight:800;cursor:pointer;display:none;box-shadow:0 4px 12px rgba(0,0,0,.5)}
+/* touch controls */
+#joy{position:absolute;bottom:26px;right:26px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.08);border:2px solid rgba(255,200,100,.5);pointer-events:auto;z-index:11}
+#joyKnob{position:absolute;width:52px;height:52px;border-radius:50%;background:rgba(255,180,60,.75);left:34px;top:34px}
+.touch-btn{position:absolute;pointer-events:auto;z-index:11;width:62px;height:62px;border-radius:50%;background:rgba(20,10,4,.7);border:2px solid #b96a1e;color:#ffd9a0;font-size:15px;font-weight:700}
+#btnShoot{bottom:40px;left:26px;width:74px;height:74px;background:rgba(160,30,0,.75);font-size:17px}
+#btnJump{bottom:126px;left:100px}
+#btnMount{bottom:126px;left:26px}
+#btnEagle{bottom:210px;left:26px}
+#btnSpy{bottom:210px;left:100px}
+#btnCrouch{bottom:40px;left:110px}
+#btnPause{position:absolute;top:10px;left:10px;pointer-events:auto;background:rgba(20,10,4,.8);border:1px solid #b96a1e;color:#ffd9a0;border-radius:8px;padding:6px 12px;font-size:15px;cursor:pointer}
+/* dialogue */
+#dialogue{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);width:min(680px,94vw);background:rgba(24,12,4,.94);border:2px solid #b96a1e;border-radius:14px;padding:16px 20px;z-index:30;direction:rtl}
+#dlgName{color:#ffb347;font-weight:800;font-size:18px;margin-bottom:6px}
+#dlgText{font-size:19px;line-height:2;min-height:56px}
+#dlgHint{font-size:13px;color:#c9a06a;text-align:left;margin-top:6px}
+#dlgChoices{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+#dlgChoices button{padding:11px 14px;font-size:17px;border-radius:10px;border:2px solid #b96a1e;background:#3a2412;color:#ffe9b0;cursor:pointer;text-align:right}
+#dlgChoices button:hover{background:#5a3a1a}
+/* cutscene */
+#cutscene{position:fixed;inset:0;z-index:25;pointer-events:none;direction:rtl}
+#letterTop,#letterBot{position:absolute;left:0;right:0;height:11vh;background:#000;transition:transform .4s}
+#letterTop{top:0;transform:translateY(-100%)}
+#letterBot{bottom:0;transform:translateY(100%)}
+#cutscene.on #letterTop{transform:none}
+#cutscene.on #letterBot{transform:none}
+#subtitle{position:absolute;bottom:13vh;left:50%;transform:translateX(-50%);width:min(720px,92vw);text-align:center;font-size:21px;line-height:1.9;color:#fff;text-shadow:0 2px 6px #000;background:rgba(0,0,0,.45);border-radius:10px;padding:8px 16px}
+#subtitle .spk{color:#ffb347;font-weight:800}
+#skipBtn{position:absolute;top:14px;left:14px;pointer-events:auto;background:rgba(0,0,0,.6);border:1px solid #888;color:#eee;border-radius:8px;padding:8px 14px;font-size:15px;cursor:pointer}
+#skipHint{position:absolute;top:56px;left:14px;color:#ccc;font-size:12px;background:rgba(0,0,0,.5);padding:4px 8px;border-radius:6px}
+#chapterTitle{position:absolute;top:38%;left:0;right:0;text-align:center;font-size:min(46px,9vw);font-weight:900;color:#ffb347;text-shadow:0 0 24px rgba(255,90,0,.8);display:none}
+/* journal / pause */
+#journalPanel,#pausePanel{position:fixed;inset:0;z-index:35;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.7)}
+#journalPanel .panel,#pausePanel .panel{max-height:86vh}
+.journal-entry{border-bottom:1px solid #5a3a1a;padding:8px 0}
+.journal-entry b{color:#ffcf6e}
+#loadingBar{width:min(320px,80vw);height:14px;background:#3a2412;border-radius:7px;overflow:hidden;margin:14px auto}
+#loadingBar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ff5a1a,#ffb347)}
+@media (max-width:700px){ #statsBar{display:none} #objectiveBar{font-size:14px} #dlgText{font-size:17px} #subtitle{font-size:17px} }
+</style>
+<script type="importmap">
+{"imports":{"three":"./lib/three.module.min.js","three/addons/":"./lib/"}}
+</script>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="eagleTint"></div><div id="spyglass"></div><div id="stormFx"></div>
+
+<div id="hud" class="hidden">
+  <div id="objectiveBar"><span class="ch" id="chLabel">الفصل 1 — الواحة</span><br><span id="objText">…</span></div>
+  <div id="statsBar">
+    <div>الصحة <div class="bar health"><i id="hpBar" style="width:100%"></i></div></div>
+    <div>الشرف: <span id="honorLabel">محايد</span> <div class="bar"><i id="honorBar" style="width:50%"></i></div></div>
+    <div>الذخيرة: <span id="ammoText">24</span> &nbsp;|&nbsp; ضمادات: <span id="bandText">2</span> &nbsp;|&nbsp; <span id="moneyText">0 ج.م</span></div>
+    <div id="relLine" style="font-size:12px;color:#d8b078"></div>
+  </div>
+  <div id="compass">➤</div>
+  <button id="btnPause">⏸ إيقاف</button>
+  <div id="crosshair"></div>
+  <div id="toast"></div>
+  <button id="interactBtn">تفاعل (E)</button>
+  <div id="fps">— FPS</div>
+  <div id="joy"><div id="joyKnob"></div></div>
+  <button class="touch-btn" id="btnShoot">🔥 أطلق</button>
+  <button class="touch-btn" id="btnJump">قفز</button>
+  <button class="touch-btn" id="btnMount">🐎 ركوب</button>
+  <button class="touch-btn" id="btnEagle">🦅 عين الصقر</button>
+  <button class="touch-btn" id="btnSpy">🔭 منظار</button>
+  <button class="touch-btn" id="btnCrouch">انحناء</button>
+</div>
+
+<div id="dialogue" class="hidden">
+  <div id="dlgName"></div><div id="dlgText"></div>
+  <div id="dlgChoices"></div><div id="dlgHint">اضغط E أو انقر للمتابعة</div>
+</div>
+
+<div id="cutscene"><div id="letterTop"></div><div id="letterBot"></div>
+  <div id="subtitle" class="hidden"></div>
+  <button id="skipBtn" class="hidden">تخطَّ ⏭</button>
+  <div id="skipHint" class="hidden">ضغطة = اللقطة التالية • ضغطة مطوّلة = تخطي المشهد</div>
+  <div id="chapterTitle"></div>
+</div>
+
+<div id="journalPanel"><div class="panel"><h2>📖 دفتر سليم</h2><div id="journalBody"></div>
+<button class="menu-btn secondary" id="journalClose">إغلاق</button></div></div>
+
+<div id="pausePanel"><div class="panel"><h2>إيقاف مؤقت</h2>
+<button class="menu-btn" id="resumeBtn">استئناف</button>
+<button class="menu-btn secondary" id="saveBtn">💾 حفظ الآن</button>
+<button class="menu-btn secondary" id="journalBtn">📖 دفتر سليم</button>
+<button class="menu-btn secondary" id="settingsBtn2">⚙️ الإعدادات</button>
+<button class="menu-btn secondary" id="quitBtn">🏠 القائمة الرئيسية</button>
+</div></div>
+
+<div id="titleScreen" class="overlay">
+  <div class="sun"></div>
+  <div class="title-main">الغروب الأحمر</div>
+  <div class="title-sub">RED SUNSET — صعيد مصر، 1924</div>
+  <div class="title-tag">قصة عن الولاء والخيانة… وهل يجد رجلٌ الخلاص قبل أن تغرب الشمس؟</div>
+  <div class="name-row"><label for="playerName">اسم البطل:</label><input id="playerName" value="سليم أبو الليل" maxlength="30"></div>
+  <button class="menu-btn" id="newGameBtn">🎮 لعبة جديدة</button>
+  <button class="menu-btn secondary" id="continueBtn">▶ استمرار</button>
+  <button class="menu-btn secondary" id="howBtn">📜 كيف تلعب</button>
+  <button class="menu-btn secondary" id="settingsBtn">⚙️ الإعدادات</button>
+  <button class="menu-btn secondary" id="creditsBtn">© الحقوق والمصادر</button>
+  <div class="small-note">لعبة أوفلاين بالكامل — لا إنترنت، لا إعلانات، لا مشتريات. الفصلان 1 و2: «الواحة» و«العاصفة».<br><span id="loadStatus">جارٍ تجهيز اللعبة…</span></div>
+  <div id="loadingBar"><i id="loadFill"></i></div>
+</div>
+
+<div id="settingsPanel" class="overlay hidden"><div class="panel"><h2>⚙️ الإعدادات</h2>
+<label>الصوت: <input type="range" id="volSlider" min="0" max="100" value="70"></label><br><br>
+<label>الجودة: <select id="qualitySel"><option value="auto">تلقائية</option><option value="high">عالية</option><option value="low">منخفضة</option></select></label><br><br>
+<label>سرعة الترجمة: <select id="subSpeed"><option value="fast">سريعة</option><option value="normal" selected>عادية</option><option value="slow">بطيئة</option></select></label><br><br>
+<button class="menu-btn" id="settingsClose">حفظ وإغلاق</button></div></div>
+
+<div id="creditsPanel" class="overlay hidden"><div class="panel"><h2>© الحقوق والمصادر</h2><div id="creditsBody">انظر ملف CREDITS.md المرفق مع اللعبة — كل الأصول مذكورة فيه مع مؤلفيها وتراخيصها.</div>
+<button class="menu-btn" id="creditsClose">إغلاق</button></div></div>
+
+<div id="howPanel" class="overlay hidden"><div class="panel"><h2>📜 كيف تلعب</h2>
+<p><b>الحركة:</b> WASD أو الأسهم / عصا اللمس. الفأرة أو السحب لتدوير الكاميرا.</p>
+<p><b>الركوب:</b> اقترب من الحصان واضغط R أو زر 🐎. وأنت راكب: Shift للعدو.</p>
+<p><b>التصويب:</b> انقر أو زر 🔥 للإطلاق. Q = عين الصقر (إبطاء الوقت). B = المنظار.</p>
+<p><b>التفاعل:</b> E أو زر «تفاعل» عند ظهوره. C = انحناء (تسلل). F = ضمادة. J = دفتر سليم. Esc = إيقاف.</p>
+<p><b>المشاهد السينمائية:</b> ضغطة على «تخطَّ» = اللقطة التالية، ضغطة مطوّلة = تخطي المشهد كله. الاختيارات لا تُتخطَّى أبدًا.</p>
+<p><b>الحفظ:</b> تلقائي عند كل نقطة تفتيش والنوم في المخيم ونهاية كل فصل.</p>
+<button class="menu-btn" id="howClose">إغلاق</button></div></div>
+
+<div id="recapScreen" class="overlay hidden"><div class="panel" style="text-align:center"><h2 id="recapTitle">الفصل الأول — الواحة — انتهى</h2>
+<p id="recapSummary" style="line-height:2"></p>
+<h3>اختياراتك في هذا الفصل</h3><div id="recapChoices" style="text-align:right"></div>
+<p id="recapStats" style="color:#d8b078"></p>
+<button class="menu-btn" id="recapNext">الفصل التالي ▶</button></div></div>
+
+<script type="module" src="./game.js"></script>
+</body>
+</html>
